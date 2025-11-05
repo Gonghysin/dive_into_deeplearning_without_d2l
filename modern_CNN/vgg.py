@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 
+from modern_CNN.alex_net import batch_size, num_epochs
+
 def vgg_block(num_convs, in_channels, out_channels):
     layers = []
     for _ in range(num_convs):
@@ -31,3 +33,33 @@ def vgg(conv_arch):
 net = vgg(conv_arch)
 
 print(net)
+
+# 构建一个高度和宽度为224的单通道数据样本，以观察每个层输出的形状。
+
+X = torch.randn(1,1,224,224)
+for blk in net:
+    X = blk(X)
+    print(blk.__class__.__name__,'output shape:\t',X.shape)
+
+# 训练
+# 数据集使用 Fashion-MNIST数据集
+
+ratio = 4
+# 构建缩小通道数的VGG配置（每层输出通道数除以ratio，用于快速实验）
+small_conv_arch = [(pair[0], pair[1]//ratio) for pair in conv_arch]
+net = vgg(small_conv_arch)
+
+lr, num_epochs , batch_size = 0.05, 10, 128
+
+import sys
+import os
+# 添加项目根目录到 Python 路径
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from modules.trainer import train_ch6, try_gpu
+from modules.data_loader import load_data_fashion_mnist
+device = try_gpu()
+
+train_iter, test_iter = load_data_fashion_mnist(batch_size, resize=224)
+
+train_ch6(net, train_iter, test_iter, num_epochs, lr, device)
