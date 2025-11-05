@@ -6,8 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
 from torch import dropout, nn
 from torch.nn.functional import pad
-from modules.data_loader import load_data_fashion_mnist
-from modules.trainer import train_ch6, try_gpu
+from modules import load_data_fashion_mnist, train_ch6
 
 net = nn.Sequential(
     # 这里使用一个11*11的更大窗口来捕捉对象。
@@ -42,10 +41,10 @@ if __name__ == '__main__':
 
     batch_size = 128
 
-    # 使用示例
-    train_iter, test_iter = load_data_fashion_mnist(batch_size, resize=224)
+    # 加载数据（会自动根据平台配置DataLoader）
+    train_iter, test_iter = load_data_fashion_mnist(batch_size, resize=224, auto_config=True)
 
     lr, num_epochs = 0.01, 10
 
-    # 开始训练
-    train_ch6(net, train_iter, test_iter, num_epochs, lr, try_gpu())
+    # 开始训练（会自动检测并使用最佳设备：Windows CUDA / Mac MPS / CPU）
+    train_ch6(net, train_iter, test_iter, num_epochs, lr, device=None)

@@ -56,10 +56,10 @@ import os
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from modules.trainer import train_ch6, try_gpu
-from modules.data_loader import load_data_fashion_mnist
-device = try_gpu()
+from modules import train_ch6, load_data_fashion_mnist
 
-train_iter, test_iter = load_data_fashion_mnist(batch_size, resize=224)
+# 加载数据（会自动根据平台配置DataLoader）
+train_iter, test_iter = load_data_fashion_mnist(batch_size, resize=224, auto_config=True)
 
-train_ch6(net, train_iter, test_iter, num_epochs, lr, device)
+# 训练模型（会自动检测并使用最佳设备：Windows CUDA / Mac MPS / CPU）
+train_ch6(net, train_iter, test_iter, num_epochs, lr, device=None)
