@@ -1,0 +1,158 @@
+# -----------------------------------------------------------
+# .gitignore for Personal PyTorch Deep Learning Projects
+# -----------------------------------------------------------
+# 目标：仅上传代码本身，忽略所有生成文件、数据和环境配置。
+#
+# **重要提示：**
+#   - 请根据您的实际项目结构调整或添加规则。
+#   - 如果某个文件被忽略了，但您希望追踪它，请使用 `git add -f <文件名>`
+#     或者修改 `.gitignore` 规则。
+# -----------------------------------------------------------
+
+
+# --- 1. 操作系统特定文件 (OS Specific Files) ---
+.DS_Store             # Mac OS X
+Thumbs.db             # Windows
+ehthumbs.db           # Windows
+Desktop.ini           # Windows
+
+# --- 2. Python 运行时和编译文件 (Python Runtime and Compiled Files) ---
+__pycache__/          # Python 字节码目录
+*.pyc                 # 字节码文件
+*.pyd                 # Windows DLLs
+*.pyo                 # 优化后的字节码文件
+*.egg                 # Python egg 包
+*.egg-info/           # egg 包信息目录
+htmlcov/              # Coverage.py HTML 报告
+.coverage             # Coverage.py 数据文件
+.Python               # 通常由IDE生成的Python相关文件
+build/                # 构建目录
+dist/                 # 分发目录
+pip-wheel-metadata/   # pip wheel 元数据
+
+# --- 3. 虚拟环境 (Virtual Environments) ---
+# 定义您可能使用的虚拟环境目录名
+venv/
+env/
+.venv/
+*venv*/               # 捕获类似 my_project_venv 这样的目录
+conda_env/
+.conda/
+.direnv/              # 用于 direnv 工具
+
+# --- 4. Jupyter Notebook 特定文件 (Jupyter Notebook Specific Files) ---
+.ipynb_checkpoints/   # Jupyter Notebook 检查点目录
+# 注意：通常不建议忽略 .ipynb 文件本身，因为它们包含代码和输出。
+# 如果您严格只上传 .py 代码，那么可以自行考虑忽略 .ipynb 文件。
+
+# --- 5. 深度学习特定文件 (Deep Learning Specific Files) ---
+
+# --- 5.1 数据集 (Datasets) ---
+# 忽略所有数据集文件和目录。这些通常很大，不应该被版本控制。
+data/                 # 常用的数据集根目录
+datasets/
+raw_data/
+processed_data/
+downloaded_data/
+intermediate_data/    # 过程中生成的中间数据
+*.npz                 # NumPy 压缩文件
+*.npy                 # NumPy 数组文件
+*.pkl                 # Pickled Python 对象 (数据预处理结果等)
+*.pickle
+*.csv                 # CSV 数据文件 (除非它是需要追踪的小型配置csv)
+*.json                # JSON 数据文件 (除非它是需要追踪的小型配置json)
+*.txt                 # 文本数据文件 (除非它是需要追踪的小型配置txt)
+*.xml                 # XML 数据文件
+*.hdf5                # HDF5 文件
+*.h5                  # HDF5 文件
+*.tar                 # tar 归档文件
+*.zip                 # zip 归档文件
+*.gz                  # gzip 压缩文件
+*.bz2                 # bzip2 压缩文件
+*.xz                  # xz 压缩文件
+*.parquet             # Parquet 数据文件
+*.feather             # Feather 数据文件
+
+# --- 5.2 模型权重和检查点 (Model Weights and Checkpoints) ---
+# 训练好的模型权重、检查点文件和相关目录。
+models/               # 存放模型定义的目录通常需要追踪，但存放已训练模型的目录应忽略
+checkpoints/
+weights/
+saved_models/
+*.pt                  # PyTorch 模型权重文件 (常用)
+*.pth                 # PyTorch 模型权重文件 (常用)
+*.h5                  # HDF5 格式的模型权重 (如 Keras / TensorFlow)
+*.onnx                # ONNX 格式模型
+*.pb                  # TensorFlow Protocol Buffer (SavedModel)
+*.ckpt                # TensorFlow Checkpoint 文件
+*.bin                 # Hugging Face 模型常用格式
+
+# --- 5.3 运行结果、日志和可视化 (Run Results, Logs, and Visualizations) ---
+# 训练日志、实验结果、图表、生成图片/视频等。
+logs/
+results/
+output/
+run_results/
+experiment_results/
+tensorboard_logs/
+runs/                 # TensorBoard 默认日志目录
+tb_logs/              # TensorBoard 自定义日志目录
+wandb/                # Weights & Biases 本地缓存/日志
+mlruns/               # MLflow 追踪日志
+*.log                 # 通用日志文件
+*.txt                 # 简单的文本输出结果
+tensor_board_events/  # TensorBoard 事件文件 (如果不在 runs/ 或 tb_logs/ 下)
+
+# --- 5.4 生成的图片和视频 (Generated Images and Videos) ---
+# 训练过程中或结果生成的图片、视频。
+images/               # 如果这个目录是存放生成图片的，而不是原始输入图片
+figures/
+plots/
+videos/
+generated_media/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.webp
+*.mp4
+*.avi
+*.mov
+*.webm
+*.mkv
+
+# --- 6. IDE 特定文件 (IDE Specific Files) ---
+# VS Code
+.vscode/              # VS Code 配置目录 (如果您共享配置，可以忽略此行)
+# PyCharm / IntelliJ IDEA
+.idea/                # PyCharm 项目配置目录
+# Eclipse
+.project
+.pydevproject
+# Other IDEs
+*.sublime-project
+*.sublime-workspace
+*.tm_properties
+
+# --- 7. 临时文件和目录 (Temporary Files and Directories) ---
+*~                    # 常见编辑器备份文件
+*.bak                 # 备份文件
+*.swp                 # Vim 交换文件
+*.swo
+*.tmp                 # 临时文件
+temp/                 # 临时目录
+tmp/                  # 临时目录
+.DS_Store?            # 防止有时 .DS_Store 在子目录里
+
+# --- 8. 配置文件 (Configuration Files) ---
+# 如果您的配置文件包含敏感信息（如API密钥、数据库凭据），或者只对您本地环境有效，
+# 则应将其忽略。如果配置文件是通用且对代码运行必要的，则应保留。
+# 为了个人练习，通常可以忽略包含凭据的实际 .env。
+.env                  # 环境变量文件 (dotenv)
+.flaskenv             # Flask 环境变量
+# config.ini            # 谨慎使用，如果配置需要分享，则不应该忽略
+
+# --- 9. 其他可能的大文件或不应上传的文件 ---
+*.bin_cache/          # 可能由某些库生成的二进制缓存
