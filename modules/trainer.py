@@ -12,26 +12,87 @@ import matplotlib.pyplot as plt
 import os
 
 
-def try_gpu(i=0):
+def get_device_info():
+    """
+    获取当前系统的设备信息
+    
+    返回:
+        dict: 包含设备类型、平台信息等的字典
+    """
+    import platform
+    
+    device_info = {
+        'platform': platform.system(),  # 'Darwin' (macOS), 'Windows', 'Linux'
+        'platform_version': platform.version(),
+        'machine': platform.machine(),  # 'arm64', 'x86_64', etc.
+        'has_cuda': torch.cuda.is_available(),
+        'cuda_count': torch.cuda.device_count() if torch.cuda.is_available() else 0,
+        'has_mps': torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False,
+        'mps_built': torch.backends.mps.is_built() if hasattr(torch.backends, 'mps') else False,
+    }
+    
+    # 添加 CUDA 设备详情
+    if device_info['has_cuda']:
+        device_info['cuda_devices'] = []
+        for i in range(device_info['cuda_count']):
+            device_info['cuda_devices'].append({
+                'id': i,
+                'name': torch.cuda.get_device_name(i),
+                'capability': torch.cuda.get_device_capability(i),
+                'total_memory': f"{torch.cuda.get_device_properties(i).total_memory / 1024**3:.2f} GB"
+            })
+    
+    return device_info
+
+
+def try_gpu(i=0, verbose=True):
     """
     尝试获取GPU设备，如果不可用则返回CPU
-    优先使用MPS（Mac GPU），其次CUDA，最后CPU
+    自动检测并选择最佳设备：
+    - macOS (Apple Silicon): 使用 MPS (Metal Performance Shaders)
+    - Windows/Linux (NVIDIA GPU): 使用 CUDA
+    - 其他情况: 使用 CPU
     
     参数:
-        i: GPU设备索引，默认为0（对MPS和CUDA都适用）
+        i: GPU设备索引，默认为0（对CUDA有效，MPS总是使用单设备）
+        verbose: 是否打印详细设备信息
     
     返回:
         torch.device对象
     """
+    device_info = get_device_info()
+    
     # 优先使用Mac的MPS（Metal Performance Shaders）
-    if torch.backends.mps.is_available():
-        return torch.device('mps')
+    if device_info['has_mps']:
+        device = torch.device('mps')
+        if verbose:
+            print(f"✓ 检测到 Apple Silicon GPU (MPS)")
+            print(f"  平台: {device_info['platform']} ({device_info['machine']})")
+            print(f"  使用设备: {device}")
     # 其次尝试CUDA（NVIDIA GPU）
-    elif torch.cuda.device_count() >= i + 1:
-        return torch.device(f'cuda:{i}')
+    elif device_info['has_cuda'] and device_info['cuda_count'] >= i + 1:
+        device = torch.device(f'cuda:{i}')
+        if verbose:
+            print(f"✓ 检测到 NVIDIA GPU (CUDA)")
+            print(f"  平台: {device_info['platform']}")
+            cuda_device = device_info['cuda_devices'][i]
+            print(f"  GPU {i}: {cuda_device['name']}")
+            print(f"  显存: {cuda_device['total_memory']}")
+            print(f"  计算能力: {cuda_device['capability']}")
+            print(f"  使用设备: {device}")
     # 最后回退到CPU
     else:
-        return torch.device('cpu')
+        device = torch.device('cpu')
+        if verbose:
+            print(f"✗ 未检测到可用 GPU，使用 CPU")
+            print(f"  平台: {device_info['platform']} ({device_info['machine']})")
+            if device_info['platform'] == 'Darwin' and not device_info['has_mps']:
+                print(f"  提示: 如果您使用的是 Apple Silicon Mac，请确保 PyTorch 版本支持 MPS")
+            elif not device_info['has_cuda']:
+                print(f"  提示: 未检测到 CUDA，如需使用 NVIDIA GPU 请安装 CUDA 版本的 PyTorch")
+            print(f"  使用设备: {device}")
+    
+    return device
 
 
 def accuracy(y_hat, y):
@@ -294,7 +355,7 @@ def train_epoch(net, train_iter, loss, optimizer, device, desc=None):
     return metric[0] / metric[2], metric[1] / metric[2]
 
 
-def train_ch6(net, train_iter, test_iter, num_epochs, lr, device, show_plot=True):
+def train_ch6(net, train_iter, test_iter, num_epochs, lr, device=None, show_plot=True):
     """
     训练模型（第6章版本）
     
@@ -304,7 +365,7 @@ def train_ch6(net, train_iter, test_iter, num_epochs, lr, device, show_plot=True
         test_iter: 测试数据迭代器
         num_epochs: 训练轮数
         lr: 学习率
-        device: 计算设备
+        device: 计算设备（如果为None，则自动检测最佳设备）
         show_plot: 是否显示训练曲线图（默认True）
     
     返回:
@@ -315,7 +376,18 @@ def train_ch6(net, train_iter, test_iter, num_epochs, lr, device, show_plot=True
             nn.init.xavier_uniform_(m.weight)
     
     net.apply(init_weights)
-    print(f'训练在 {device} 上进行')
+    
+    # 如果没有指定设备，则自动检测
+    if device is None:
+        print("=" * 60)
+        print("自动检测计算设备...")
+        print("=" * 60)
+        device = try_gpu(verbose=True)
+        print("=" * 60)
+    else:
+        print(f'使用指定设备: {device}')
+    
+    print(f'\n开始训练模型...')
     
     net.to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
