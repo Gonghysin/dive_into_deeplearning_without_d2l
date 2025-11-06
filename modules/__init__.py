@@ -11,7 +11,9 @@ from .trainer import (
     train_ch6,
     train_epoch,
     Accumulator,
-    Animator
+    Animator,
+    detect_available_fonts,
+    configure_matplotlib_fonts
 )
 
 from .data_loader import (
@@ -33,6 +35,10 @@ __all__ = [
     # 数据加载
     'load_data_fashion_mnist',
     'get_dataloader_config',
+    
+    # 字体配置
+    'detect_available_fonts',
+    'configure_matplotlib_fonts',
     
     # 工具类
     'Accumulator',
