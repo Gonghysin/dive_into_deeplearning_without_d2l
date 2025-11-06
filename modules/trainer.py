@@ -9,7 +9,120 @@ import matplotlib
 # 使用非交互式后端，提高训练效率，不显示窗口
 matplotlib.use('Agg')  # Agg后端，只保存图片，不显示窗口
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 import os
+import platform
+import warnings
+
+
+def detect_available_fonts(verbose=False):
+    """
+    检测系统中可用的中英文字体
+    
+    参数:
+        verbose: 是否打印详细信息
+    
+    返回:
+        list: 可用的字体列表（优先级从高到低）
+    """
+    sys_platform = platform.system()
+    
+    # 获取系统所有可用字体
+    available_fonts = set([f.name for f in fm.fontManager.ttflist])
+    
+    # 定义各系统的中文字体优先级列表
+    font_candidates = {
+        'Darwin': [  # macOS
+            'Hiragino Sans GB',      # 用户指定的字体
+            'PingFang SC',           # 苹方-简体中文
+            'PingFang HK',           # 苹方-香港
+            'PingFang TC',           # 苹方-繁体中文
+            'Heiti SC',              # 黑体-简
+            'Heiti TC',              # 黑体-繁
+            'STHeiti',               # 华文黑体
+            'Arial Unicode MS',      # Arial Unicode（支持中文）
+            'Apple LiGothic',        # 苹果俪黑
+        ],
+        'Windows': [  # Windows
+            'Microsoft YaHei',       # 微软雅黑
+            'Microsoft YaHei UI',    # 微软雅黑UI
+            'SimHei',                # 黑体
+            'SimSun',                # 宋体
+            'KaiTi',                 # 楷体
+            'FangSong',              # 仿宋
+            'NSimSun',               # 新宋体
+            'YouYuan',               # 幼圆
+        ],
+        'Linux': [  # Linux
+            'Noto Sans CJK SC',      # 思源黑体-简体
+            'Noto Sans CJK TC',      # 思源黑体-繁体
+            'Noto Serif CJK SC',     # 思源宋体-简体
+            'WenQuanYi Micro Hei',   # 文泉驿微米黑
+            'WenQuanYi Zen Hei',     # 文泉驿正黑
+            'Droid Sans Fallback',   # Droid备用字体
+            'AR PL UMing CN',        # 文鼎PL简中明
+            'AR PL UKai CN',         # 文鼎PL简中楷
+        ]
+    }
+    
+    # 通用备用字体（支持中文的Unicode字体）
+    universal_fonts = [
+        'DejaVu Sans',
+        'Liberation Sans',
+        'FreeSans',
+        'Arial',
+        'Helvetica',
+        'sans-serif',  # 系统默认无衬线字体
+    ]
+    
+    # 获取当前系统的字体候选列表
+    system_fonts = font_candidates.get(sys_platform, [])
+    all_candidates = system_fonts + universal_fonts
+    
+    # 找出实际可用的字体
+    selected_fonts = []
+    for font in all_candidates:
+        if font in available_fonts or font == 'sans-serif':
+            selected_fonts.append(font)
+            if verbose and font != 'sans-serif':
+                print(f"  ✓ 找到字体: {font}")
+    
+    # 如果没有找到任何字体，使用系统默认字体
+    if not selected_fonts:
+        selected_fonts = ['sans-serif']
+        if verbose:
+            print(f"  ⚠ 未找到推荐字体，使用系统默认字体")
+    
+    if verbose:
+        print(f"[字体配置] {sys_platform} 系统")
+        print(f"  已选择字体列表: {selected_fonts[:3]}{'...' if len(selected_fonts) > 3 else ''}")
+        print(f"  主要字体: {selected_fonts[0]}")
+    
+    return selected_fonts
+
+
+def configure_matplotlib_fonts(verbose=False):
+    """
+    配置 matplotlib 的字体设置，确保中文显示正常
+    
+    参数:
+        verbose: 是否打印详细信息
+    """
+    # 获取可用字体列表
+    fonts = detect_available_fonts(verbose=verbose)
+    
+    # 设置字体
+    plt.rcParams['font.sans-serif'] = fonts
+    # 解决负号显示问题
+    plt.rcParams['axes.unicode_minus'] = False
+    
+    # 抑制字体警告
+    warnings.filterwarnings('ignore', category=UserWarning, module='matplotlib')
+    
+    if verbose:
+        print(f"✓ Matplotlib 字体配置完成\n")
+    
+    return fonts[0]  # 返回主要字体名称
 
 
 def get_device_info():
@@ -183,14 +296,8 @@ class Animator:
             figsize: 图像大小
             save_path: 实时保存图片的路径
         """
-        # 设置字体（使用系统可用字体，避免字体警告）
-        # macOS上优先使用系统字体
-        import platform
-        if platform.system() == 'Darwin':  # macOS
-            plt.rcParams['font.sans-serif'] = ['PingFang SC', 'Arial Unicode MS', 'Arial', 'Helvetica', 'DejaVu Sans']
-        else:
-            plt.rcParams['font.sans-serif'] = ['Arial', 'Helvetica', 'DejaVu Sans']
-        plt.rcParams['axes.unicode_minus'] = False
+        # 自动配置字体，支持 Linux/Windows/Mac 等各种系统
+        self.primary_font = configure_matplotlib_fonts(verbose=False)
         
         # 不使用交互模式，提高训练效率
         # plt.ion()  # 已移除，使用非交互式后端
@@ -386,6 +493,14 @@ def train_ch6(net, train_iter, test_iter, num_epochs, lr, device=None, show_plot
         print("=" * 60)
     else:
         print(f'使用指定设备: {device}')
+    
+    # 配置绘图字体（在初始化 Animator 之前）
+    if show_plot:
+        print("\n" + "=" * 60)
+        print("配置绘图字体...")
+        print("=" * 60)
+        configure_matplotlib_fonts(verbose=True)
+        print("=" * 60)
     
     print(f'\n开始训练模型...')
     
