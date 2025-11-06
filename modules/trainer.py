@@ -274,20 +274,22 @@ class Accumulator:
 class Animator:
     """
     实时绘制训练曲线的动画类
+    支持多子图，可以将不同类型的指标分开显示
     """
     def __init__(self, xlabel=None, ylabel=None, legend=None, xlim=None,
                  ylim=None, xscale='linear', yscale='linear',
                  fmts=('-', 'm--', 'g-.', 'r:'), nrows=1, ncols=1,
-                 figsize=(8, 6), save_path='training_curves.png'):
+                 figsize=(8, 6), save_path='training_curves.png',
+                 subplot_config=None):
         """
         初始化动画绘制器
         
         参数:
-            xlabel: x轴标签
-            ylabel: y轴标签
-            legend: 图例列表
+            xlabel: x轴标签（单个标签或标签列表，对应每个子图）
+            ylabel: y轴标签（单个标签或标签列表，对应每个子图）
+            legend: 图例列表（单个列表或嵌套列表，对应每个子图）
             xlim: x轴范围
-            ylim: y轴范围
+            ylim: y轴范围（单个范围或范围列表，对应每个子图）
             xscale: x轴缩放类型
             yscale: y轴缩放类型
             fmts: 线条格式列表
@@ -295,6 +297,8 @@ class Animator:
             ncols: 子图列数
             figsize: 图像大小
             save_path: 实时保存图片的路径
+            subplot_config: 子图配置字典列表，每个字典包含该子图的配置
+                          [{'data_indices': [0], 'ylabel': 'Loss', 'legend': ['Train Loss']}, ...]
         """
         # 自动配置字体，支持 Linux/Windows/Mac 等各种系统
         self.primary_font = configure_matplotlib_fonts(verbose=False)
@@ -304,6 +308,11 @@ class Animator:
         
         if legend is None:
             legend = []
+        
+        self.nrows = nrows
+        self.ncols = ncols
+        self.num_subplots = nrows * ncols
+        
         self.fig, self.axes = plt.subplots(nrows, ncols, figsize=figsize)
         
         # 设置图片保存路径（使用绝对路径）
@@ -313,21 +322,31 @@ class Animator:
             self.save_path = os.path.join(os.getcwd(), save_path)
         self.real_time_save = True  # 是否实时保存图片
         
+        # 确保 axes 是列表
         if nrows * ncols == 1:
             self.axes = [self.axes]
+        else:
+            self.axes = self.axes.flatten()
+        
         # 保存配置参数
-        self.xlabel = xlabel
-        self.ylabel = ylabel
+        self.xlabel = xlabel if isinstance(xlabel, list) else [xlabel] * self.num_subplots
+        self.ylabel = ylabel if isinstance(ylabel, list) else [ylabel] * self.num_subplots
+        self.legend = legend if (isinstance(legend, list) and legend and isinstance(legend[0], list)) else [legend]
         self.xlim = xlim
-        self.ylim = ylim
+        self.ylim = ylim if isinstance(ylim, list) else [ylim] * self.num_subplots
         self.xscale = xscale
         self.yscale = yscale
-        self.legend = legend
-        self.X, self.Y, self.fmts = None, None, fmts
+        self.fmts = fmts
+        self.X, self.Y = None, None
         
-        # 初始化坐标轴（不需要显示窗口）
-        self._set_axes(self.axes[0], self.xlabel, self.ylabel, self.xlim, 
-                      self.ylim, self.xscale, self.yscale, self.legend)
+        # 子图配置：指定哪些数据系列绘制在哪个子图上
+        self.subplot_config = subplot_config
+        
+        # 初始化所有子图的坐标轴
+        for i, ax in enumerate(self.axes):
+            leg = self.legend[i] if i < len(self.legend) else []
+            self._set_axes(ax, self.xlabel[i], self.ylabel[i], self.xlim, 
+                          self.ylim[i], self.xscale, self.yscale, leg)
         
     def _set_axes(self, axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
         """设置坐标轴"""
@@ -344,7 +363,13 @@ class Animator:
         axes.grid()
     
     def add(self, x, y):
-        """添加数据点"""
+        """
+        添加数据点
+        
+        参数:
+            x: x轴数据（标量或列表）
+            y: y轴数据（列表，包含所有数据系列的值）
+        """
         if not hasattr(y, "__len__"):
             y = [y]
         n = len(y)
@@ -358,66 +383,104 @@ class Animator:
             if a is not None and b is not None:
                 self.X[i].append(a)
                 self.Y[i].append(b)
-        # 清空并重新绘制
-        self.axes[0].clear()
         
-        # 只有在有数据时才绘制
-        has_data = False
-        for x_data, y_data, fmt in zip(self.X, self.Y, self.fmts):
-            if x_data and y_data:  # 确保有数据
-                self.axes[0].plot(x_data, y_data, fmt)
-                has_data = True
-        
-        # 如果没有数据，只显示坐标轴
-        if not has_data:
-            # 设置一个小的范围以便显示坐标轴
-            self.axes[0].set_xlim([0, 1])
-            self.axes[0].set_ylim([0, 1])
-        
-        # 自动调整y轴范围（如果所有数据都已存在）
-        if self.X and self.X[0] and has_data:
-            all_y_values = []
-            for y_list in self.Y:
-                if y_list:
-                    all_y_values.extend(y_list)
-            if all_y_values:
-                y_min, y_max = min(all_y_values), max(all_y_values)
-                y_range = y_max - y_min
-                # 添加一些边距
-                y_margin = y_range * 0.1 if y_range > 0 else 0.1
-                auto_ylim = [max(0, y_min - y_margin), y_max + y_margin]
-                # 使用自动计算的ylim，如果原始ylim为None或者需要自动调整
-                use_ylim = auto_ylim if self.ylim is None else self.ylim
-            else:
-                use_ylim = self.ylim
+        # 如果有子图配置，按配置绘制到不同子图
+        if self.subplot_config:
+            has_data = False
+            for subplot_idx, config in enumerate(self.subplot_config):
+                if subplot_idx >= len(self.axes):
+                    break
+                    
+                ax = self.axes[subplot_idx]
+                ax.clear()
+                
+                data_indices = config.get('data_indices', [])
+                subplot_has_data = False
+                
+                # 绘制该子图对应的数据系列
+                for i, data_idx in enumerate(data_indices):
+                    if data_idx < len(self.X) and self.X[data_idx] and self.Y[data_idx]:
+                        fmt = self.fmts[i % len(self.fmts)]
+                        ax.plot(self.X[data_idx], self.Y[data_idx], fmt, linewidth=2)
+                        subplot_has_data = True
+                        has_data = True
+                
+                # 设置该子图的属性
+                if subplot_has_data:
+                    # 自动调整y轴范围
+                    subplot_y_values = []
+                    for data_idx in data_indices:
+                        if data_idx < len(self.Y) and self.Y[data_idx]:
+                            subplot_y_values.extend(self.Y[data_idx])
+                    
+                    if subplot_y_values:
+                        y_min, y_max = min(subplot_y_values), max(subplot_y_values)
+                        y_range = y_max - y_min
+                        y_margin = y_range * 0.1 if y_range > 0 else 0.1
+                        auto_ylim = [max(0, y_min - y_margin), y_max + y_margin]
+                        use_ylim = auto_ylim if self.ylim[subplot_idx] is None else self.ylim[subplot_idx]
+                    else:
+                        use_ylim = self.ylim[subplot_idx]
+                else:
+                    use_ylim = self.ylim[subplot_idx]
+                
+                # 设置坐标轴
+                subplot_legend = config.get('legend', [])
+                self._set_axes(ax, self.xlabel[subplot_idx], config.get('ylabel', self.ylabel[subplot_idx]), 
+                              self.xlim, use_ylim, self.xscale, self.yscale, subplot_legend)
         else:
-            use_ylim = self.ylim
+            # 原有逻辑：所有数据绘制在第一个子图
+            self.axes[0].clear()
+            has_data = False
+            for x_data, y_data, fmt in zip(self.X, self.Y, self.fmts):
+                if x_data and y_data:
+                    self.axes[0].plot(x_data, y_data, fmt, linewidth=2)
+                    has_data = True
             
-        self._set_axes(self.axes[0], self.xlabel, self.ylabel, self.xlim, 
-                      use_ylim, self.xscale, self.yscale, self.legend)
+            if not has_data:
+                self.axes[0].set_xlim([0, 1])
+                self.axes[0].set_ylim([0, 1])
+            
+            # 自动调整y轴范围
+            if self.X and self.X[0] and has_data:
+                all_y_values = []
+                for y_list in self.Y:
+                    if y_list:
+                        all_y_values.extend(y_list)
+                if all_y_values:
+                    y_min, y_max = min(all_y_values), max(all_y_values)
+                    y_range = y_max - y_min
+                    y_margin = y_range * 0.1 if y_range > 0 else 0.1
+                    auto_ylim = [max(0, y_min - y_margin), y_max + y_margin]
+                    use_ylim = auto_ylim if self.ylim[0] is None else self.ylim[0]
+                else:
+                    use_ylim = self.ylim[0]
+            else:
+                use_ylim = self.ylim[0]
+                
+            self._set_axes(self.axes[0], self.xlabel[0], self.ylabel[0], self.xlim, 
+                          use_ylim, self.xscale, self.yscale, self.legend[0] if self.legend else [])
         
-        # 确保图片有内容，然后保存（不显示窗口，提高训练效率）
-        self.fig.tight_layout()  # 自动调整布局
+        # 确保图片有内容，然后保存
+        self.fig.tight_layout()
         
-        # 实时保存图片到本地 - 只有在有数据时才保存
+        # 实时保存图片到本地
         if self.real_time_save and has_data:
             try:
-                # 确保目录存在
                 save_dir = os.path.dirname(self.save_path)
                 if save_dir and not os.path.exists(save_dir):
                     os.makedirs(save_dir, exist_ok=True)
                 
                 self.fig.savefig(self.save_path, dpi=150, bbox_inches='tight')
-                # 验证文件是否真的被创建
                 if not os.path.exists(self.save_path):
-                    print(f'警告: 图片文件保存失败，路径: {self.save_path}')
+                    print(f'Warning: Failed to save plot to: {self.save_path}')
             except Exception as e:
-                print(f'警告: 保存图片失败: {e}, 路径: {self.save_path}')
+                print(f'Warning: Failed to save plot: {e}, path: {self.save_path}')
     
     def save(self, filename='training_curves.png'):
         """保存图片"""
         self.fig.savefig(filename, dpi=150, bbox_inches='tight')
-        print(f'训练曲线已保存到: {filename}')
+        print(f'Training curve saved to: {filename}')
 
 
 def train_epoch(net, train_iter, loss, optimizer, device, desc=None):
@@ -521,12 +584,34 @@ def train_ch6(net, train_iter, test_iter, num_epochs, lr, device=None, show_plot
         modules_dir = os.path.dirname(current_file)  # modules 目录
         project_root = os.path.dirname(modules_dir)  # deep_to_dl 目录
         save_path = os.path.join(project_root, 'training_curves.png')
-        animator = Animator(xlabel='Epoch', ylabel='Value', 
-                           legend=['训练损失', '训练准确率', '测试准确率'],
-                           xlim=[1, num_epochs], ylim=None,  # None表示自动调整
-                           figsize=(10, 6), save_path=save_path)
-        print(f'训练曲线将实时保存到: {save_path}')
-        print('提示: 图片会在后台实时更新，训练完成后可查看上述路径的图片文件')
+        
+        # 使用两个子图：上方显示损失，下方显示准确率
+        # 数据顺序：[0: train_loss, 1: train_acc, 2: test_acc]
+        subplot_config = [
+            {
+                'data_indices': [0],  # 训练损失
+                'ylabel': 'Loss',
+                'legend': ['Train Loss']
+            },
+            {
+                'data_indices': [1, 2],  # 训练和测试准确率
+                'ylabel': 'Accuracy',
+                'legend': ['Train Acc', 'Test Acc']
+            }
+        ]
+        
+        animator = Animator(
+            xlabel=['Epoch', 'Epoch'],
+            ylabel=['Loss', 'Accuracy'],
+            xlim=[1, num_epochs],
+            ylim=[None, [0, 1]],  # 损失自动调整，准确率固定0-1
+            nrows=2, ncols=1,
+            figsize=(10, 8),
+            save_path=save_path,
+            subplot_config=subplot_config
+        )
+        print(f'Training curve will be saved to: {save_path}')
+        print('Note: The plot will be updated in real-time during training')
     
     # 训练循环
     epoch_pbar = tqdm(range(num_epochs), desc='总体进度', dynamic_ncols=True)
