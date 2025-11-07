@@ -413,14 +413,20 @@ class Animator:
                         if data_idx < len(self.Y) and self.Y[data_idx]:
                             subplot_y_values.extend(self.Y[data_idx])
                     
-                    if subplot_y_values:
-                        y_min, y_max = min(subplot_y_values), max(subplot_y_values)
+                    # 过滤掉 NaN 和 Inf 值
+                    import math
+                    valid_y_values = [y for y in subplot_y_values if not (math.isnan(y) or math.isinf(y))]
+                    
+                    if valid_y_values:
+                        y_min, y_max = min(valid_y_values), max(valid_y_values)
                         y_range = y_max - y_min
                         y_margin = y_range * 0.1 if y_range > 0 else 0.1
                         auto_ylim = [max(0, y_min - y_margin), y_max + y_margin]
                         use_ylim = auto_ylim if self.ylim[subplot_idx] is None else self.ylim[subplot_idx]
                     else:
-                        use_ylim = self.ylim[subplot_idx]
+                        # 如果所有值都是 NaN/Inf，使用默认范围
+                        use_ylim = [0, 1] if self.ylim[subplot_idx] is None else self.ylim[subplot_idx]
+                        print(f'警告: 子图 {subplot_idx} 的所有 y 值都是 NaN 或 Inf，训练可能不稳定！')
                 else:
                     use_ylim = self.ylim[subplot_idx]
                 
@@ -447,14 +453,21 @@ class Animator:
                 for y_list in self.Y:
                     if y_list:
                         all_y_values.extend(y_list)
-                if all_y_values:
-                    y_min, y_max = min(all_y_values), max(all_y_values)
+                
+                # 过滤掉 NaN 和 Inf 值
+                import math
+                valid_y_values = [y for y in all_y_values if not (math.isnan(y) or math.isinf(y))]
+                
+                if valid_y_values:
+                    y_min, y_max = min(valid_y_values), max(valid_y_values)
                     y_range = y_max - y_min
                     y_margin = y_range * 0.1 if y_range > 0 else 0.1
                     auto_ylim = [max(0, y_min - y_margin), y_max + y_margin]
                     use_ylim = auto_ylim if self.ylim[0] is None else self.ylim[0]
                 else:
-                    use_ylim = self.ylim[0]
+                    # 如果所有值都是 NaN/Inf，使用默认范围
+                    use_ylim = [0, 1] if self.ylim[0] is None else self.ylim[0]
+                    print(f'警告: 所有 y 值都是 NaN 或 Inf，训练可能不稳定！')
             else:
                 use_ylim = self.ylim[0]
                 
