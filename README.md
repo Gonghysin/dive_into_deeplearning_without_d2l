@@ -43,4 +43,3 @@ git clone https://ghfast.top/https://github.com/Gonghysin/dive_into_deeplearning
 - [x] BatchNorm
 - [x] ResNet
 - [ ] DenseNet
-
