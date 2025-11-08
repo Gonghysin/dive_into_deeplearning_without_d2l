@@ -1,31 +1,25 @@
-# 项目介绍
+# 动手学深度学习
 
-此仓库为我学习《动手学深度学习》中，各算法的代码实践。
+《动手学深度学习》代码实践项目。不使用 d2l 库，自行实现相关函数并封装到 `modules` 模块中。
 
-鉴于d2l库已经很久没有维护，环境较为难以安装，所以本项目不使用d2l，而是自己实现其中的函数。这些函数都封装到modules模块中。
+## 快速开始
 
-## 使用步骤
-
-如果使用AutoDL的学术加速进行部署：
+克隆项目：
 
 ```bash
-
-source /etc/network_turbo
-
-```
-
-```bash
-
 git clone https://github.com/Gonghysin/dive_into_deeplearning_without_d2l.git
-
 ```
 
-或者用国内github镜像站：
+或使用国内镜像：
 
 ```bash
-
 git clone https://ghfast.top/https://github.com/Gonghysin/dive_into_deeplearning_without_d2l
+```
 
+如在 AutoDL 平台部署，先启用学术加速：
+
+```bash
+source /etc/network_turbo
 ```
 
 ## 项目进度
@@ -42,4 +36,14 @@ git clone https://ghfast.top/https://github.com/Gonghysin/dive_into_deeplearning
 - [x] GoogleNet
 - [x] BatchNorm
 - [x] ResNet
-- [ ] DenseNet
+- [x] DenseNet
+
+### 循环神经网络
+
+- [ ] 序列模型
+- [ ] 文本预处理
+- [ ] 语言模型和数据集
+- [ ] 循环神经网络
+- [ ] 循环神经网络的从零开始实现
+- [ ] 循环神经网络的简洁实现
+- [ ] 通过时间反向传播
