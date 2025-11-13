@@ -10,6 +10,11 @@ modules 包初始化文件
 import sys
 from functools import wraps
 
+# 先导入 plot_utils，让它设置好 matplotlib 后端，避免与 trainer 冲突
+from .plot_utils import (
+    plot
+)
+
 from .trainer import (
     try_gpu,
     get_device_info,
@@ -150,6 +155,9 @@ __all__ = [
     # 字体配置
     'detect_available_fonts',
     'configure_matplotlib_fonts',
+    
+    # 绘图工具
+    'plot',
     
     # 工具类
     'Accumulator',

@@ -6,8 +6,9 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 import matplotlib
-# 使用非交互式后端，提高训练效率，不显示窗口
-matplotlib.use('Agg')  # Agg后端，只保存图片，不显示窗口
+# 注释掉强制设置后端，让 plot_utils 先设置
+# 这样可以避免多次设置后端导致的冲突
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import os
