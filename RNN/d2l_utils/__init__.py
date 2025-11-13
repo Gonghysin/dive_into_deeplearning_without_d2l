@@ -7,7 +7,7 @@ from .plot import plot, Animator, set_figsize, set_axes
 from .data import load_array
 from .train import train, train_with_animator
 from .download import DATA_HUB, DATA_URL, download, register_dataset
-from .text import read_time_machine, tokenize, count_corpus, Vocab, load_corpus_time_machine
+from .text import read_time_machine, tokenize, count_corpus, Vocab, load_corpus_time_machine, seq_data_iter_random, seq_data_iter_sequential, SeqDataLoader, load_data_time_machine
 
 __all__ = [
     # 绘图工具
@@ -35,5 +35,9 @@ __all__ = [
     'count_corpus',
     'Vocab',
     'load_corpus_time_machine',
+    'seq_data_iter_random',
+    'seq_data_iter_sequential',
+    'SeqDataLoader',
+    'load_data_time_machine',
 ]
 
