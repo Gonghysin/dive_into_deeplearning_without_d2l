@@ -5,9 +5,11 @@ d2l 工具模块
 
 from .plot import plot, Animator, set_figsize, set_axes
 from .data import load_array
-from .train import train, train_with_animator
+from .train import train, train_with_animator, Accumulator, Timer
 from .download import DATA_HUB, DATA_URL, download, register_dataset
 from .text import read_time_machine, tokenize, count_corpus, Vocab, load_corpus_time_machine, seq_data_iter_random, seq_data_iter_sequential, SeqDataLoader, load_data_time_machine
+from .device import try_gpu, try_all_gpus, get_device_info
+from .rnn import RNNModelScratch, predict_ch8, grad_clipping, sgd, train_epoch_ch8, train_ch8
 
 __all__ = [
     # 绘图工具
@@ -22,6 +24,8 @@ __all__ = [
     # 训练工具
     'train',
     'train_with_animator',
+    'Accumulator',
+    'Timer',
     
     # 下载工具
     'DATA_HUB',
@@ -39,5 +43,18 @@ __all__ = [
     'seq_data_iter_sequential',
     'SeqDataLoader',
     'load_data_time_machine',
+    
+    # 设备管理
+    'try_gpu',
+    'try_all_gpus',
+    'get_device_info',
+    
+    # RNN 工具
+    'RNNModelScratch',
+    'predict_ch8',
+    'grad_clipping',
+    'sgd',
+    'train_epoch_ch8',
+    'train_ch8',
 ]
 
