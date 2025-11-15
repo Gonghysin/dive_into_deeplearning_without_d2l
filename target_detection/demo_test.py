@@ -188,7 +188,7 @@ def visualize_single_detection(image, boxes, labels, scores, save_path, image_na
         )
         ax.add_patch(rect)
         
-        # 绘制标签
+        # 绘制标签（英文）
         label_text = f'{label_name}: {score:.2f}'
         ax.text(
             xmin, ymin - 8,
@@ -199,8 +199,8 @@ def visualize_single_detection(image, boxes, labels, scores, save_path, image_na
             weight='bold'
         )
     
-    # 添加标题
-    title = f'{image_name}\n检测到 {n_objects} 个目标'
+    # 添加标题（英文）
+    title = f'{image_name}\nDetected {n_objects} objects'
     ax.set_title(title, fontsize=14, fontweight='bold', pad=15)
     ax.axis('off')
     
@@ -229,13 +229,13 @@ def create_summary_visualization(result_paths, output_path):
         ax.imshow(img)
         ax.axis('off')
     
-    plt.suptitle('TinyDetector 目标检测效果演示', 
+    plt.suptitle('TinyDetector Object Detection Demo', 
                  fontsize=20, fontweight='bold', y=0.995)
     plt.tight_layout()
     plt.savefig(output_path, dpi=200, bbox_inches='tight')
     plt.close()
     
-    print(f"✓ 汇总展示已保存: {output_path}")
+    print(f"✓ Summary visualization saved: {output_path}")
 
 
 def main():
@@ -249,7 +249,7 @@ def main():
     print("=" * 70)
     
     # 设置路径
-    base_dir = '/Users/mac/PycharmProjects/my/my_learn/deep_to_dl/target_detection'
+    base_dir = '.'  # 当前目录
     test_images_dir = os.path.join(base_dir, 'test_images')
     demo_results_dir = os.path.join(base_dir, 'results', 'demo_test')
     checkpoint_path = os.path.join(base_dir, 'results', 'checkpoints', 'best_model.pth')
@@ -308,7 +308,7 @@ def main():
             result_path = os.path.join(demo_results_dir, f'result_{i+1:02d}.jpg')
             visualize_single_detection(
                 original_image, boxes, labels, scores, 
-                result_path, f'测试图片 {i+1}'
+                result_path, f'Test Image {i+1}'
             )
             
             result_paths.append(result_path)

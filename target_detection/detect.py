@@ -140,7 +140,7 @@ def visualize_detection(image, boxes, labels, scores, save_path=None):
         )
         ax.add_patch(rect)
         
-        # 绘制标签文本
+        # 绘制标签文本（英文）
         label_text = f'{label_name}: {score:.2f}'
         ax.text(
             xmin, ymin - 5,
@@ -157,7 +157,7 @@ def visualize_detection(image, boxes, labels, scores, save_path=None):
     # 保存或显示
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0.1)
-        print(f'检测结果已保存到: {save_path}')
+        print(f'Detection result saved to: {save_path}')
     else:
         plt.show()
     
@@ -221,7 +221,7 @@ def main():
     parser.add_argument('--image', type=str, help='单张图像路径')
     parser.add_argument('--image_dir', type=str, help='图像目录（批量检测）')
     parser.add_argument('--output_dir', type=str, 
-                       default='/Users/mac/PycharmProjects/my/my_learn/deep_to_dl/target_detection/results/detections',
+                       default='./results/detections',
                        help='输出目录')
     parser.add_argument('--min_score', type=float, default=0.2, help='最低置信度阈值')
     parser.add_argument('--max_overlap', type=float, default=0.45, help='NMS IoU 阈值')
