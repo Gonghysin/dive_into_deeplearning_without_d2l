@@ -92,29 +92,78 @@ class VGGBase(nn.Module):
         """
         从 torchvision 的预训练 VGG16 模型加载权重。
         """
-        # 加载预训练的 VGG16 模型
-        pretrained_vgg = torchvision.models.vgg16(pretrained=True)
-        pretrained_features = pretrained_vgg.features
-        
-        # 获取当前模型的状态字典
-        model_dict = self.state_dict()
-        
-        # 创建权重映射
-        pretrained_dict = {}
-        pretrained_state = pretrained_features.state_dict()
-        
-        # 匹配层名称并复制权重
-        for name, param in pretrained_state.items():
-            # 将预训练模型的 features.x 映射到当前模型的 features.x
-            new_name = f'features.{name}'
-            if new_name in model_dict:
-                pretrained_dict[new_name] = param
-        
-        # 更新模型权重
-        model_dict.update(pretrained_dict)
-        self.load_state_dict(model_dict)
-        
-        print(f"成功加载预训练权重：{len(pretrained_dict)}/{len(model_dict)} 层")
+        try:
+            # 加载预训练的 VGG16 模型（使用新的API以避免警告）
+            try:
+                # 尝试使用新版本的API
+                from torchvision.models import VGG16_Weights
+                pretrained_vgg = torchvision.models.vgg16(weights=VGG16_Weights.IMAGENET1K_V1)
+            except (ImportError, AttributeError):
+                # 如果新API不可用，使用旧API
+                pretrained_vgg = torchvision.models.vgg16(pretrained=True)
+            
+            pretrained_features = pretrained_vgg.features
+            
+            # 获取当前模型的状态字典
+            model_dict = self.state_dict()
+            
+            # 创建权重映射
+            pretrained_dict = {}
+            pretrained_state = pretrained_features.state_dict()
+            
+            # 匹配层名称并复制权重
+            for pretrained_name, pretrained_param in pretrained_state.items():
+                # 预训练模型的层名如: "0.weight", "0.bias", "2.weight" 等
+                # 我们的模型层名如: "features.0.0.weight", "features.0.1.weight" 等
+                
+                # 遍历我们模型的所有层
+                for model_name, model_param in model_dict.items():
+                    # 检查是否匹配（形状和名称后缀）
+                    if (model_name.startswith('features.') and 
+                        model_name.endswith(pretrained_name.split('.')[-1]) and
+                        model_param.shape == pretrained_param.shape):
+                        # 检查是否已经有匹配的权重
+                        if model_name not in pretrained_dict:
+                            pretrained_dict[model_name] = pretrained_param
+                            break
+            
+            # 如果匹配失败，尝试直接按索引匹配
+            if len(pretrained_dict) == 0:
+                print("  尝试按层索引匹配...")
+                pretrained_layers = list(pretrained_features.children())
+                our_blocks = list(self.features.children())
+                
+                loaded_count = 0
+                for our_block_idx, our_block in enumerate(our_blocks):
+                    # 遍历每个块中的层
+                    for layer in our_block:
+                        if isinstance(layer, nn.Conv2d):
+                            # 找对应的预训练卷积层
+                            for pretrained_layer in pretrained_layers:
+                                if isinstance(pretrained_layer, nn.Conv2d):
+                                    if (pretrained_layer.weight.shape == layer.weight.shape and
+                                        pretrained_layer not in [pl for pl in pretrained_layers[:loaded_count]]):
+                                        layer.weight.data = pretrained_layer.weight.data.clone()
+                                        if layer.bias is not None and pretrained_layer.bias is not None:
+                                            layer.bias.data = pretrained_layer.bias.data.clone()
+                                        loaded_count += 1
+                                        break
+                
+                if loaded_count > 0:
+                    print(f"✓ 成功加载预训练权重：{loaded_count} 个卷积层")
+                    return
+            
+            # 更新模型权重
+            if len(pretrained_dict) > 0:
+                model_dict.update(pretrained_dict)
+                self.load_state_dict(model_dict)
+                print(f"✓ 成功加载预训练权重：{len(pretrained_dict)} 层")
+            else:
+                print("⚠ 未能加载预训练权重，将使用随机初始化")
+                
+        except Exception as e:
+            print(f"⚠ 加载预训练权重时出错: {e}")
+            print("  将使用随机初始化")
 
 class PredictionConvolutions(nn.Module):
     """
@@ -223,7 +272,7 @@ class TinyDetector(nn.Module):
         self.pred_convs = PredictionConvolutions(n_classes)
 
         # 生成先验框（Anchor Boxes），维度 (441, 4)，格式 [cx, cy, w, h]
-        self.priors_cscy = self.create_prior_boxes()
+        self.priors_cxcy = self.create_prior_boxes()
 
     def forward(self, image):
         """
@@ -326,7 +375,7 @@ class TinyDetector(nn.Module):
                               每个元素维度 (n_objects,)
         """
         batch_size = predicted_locs.size(0)
-        n_priors = self.priors_cscy.size(0)  # 441
+        n_priors = self.priors_cxcy.size(0)  # 441
         
         # 将 logits 转换为概率分布（在类别维度上进行 softmax）
         predicted_scores = F.softmax(predicted_scores, dim=2)  # (N, 441, n_classes)
@@ -346,7 +395,7 @@ class TinyDetector(nn.Module):
             # gcxgcy_to_cxcy: 偏移 → 中心点格式 [cx, cy, w, h]
             # cxcy_to_xy: 中心点格式 → 角点格式 [xmin, ymin, xmax, ymax]
             decoded_locs = cxcy_to_xy(
-                gcxgcy_to_cxcy(predicted_locs[i], self.priors_cscy)
+                gcxgcy_to_cxcy(predicted_locs[i], self.priors_cxcy)
             )  # (441, 4)
 
             # 当前图像的检测结果（将在后续步骤中填充）
