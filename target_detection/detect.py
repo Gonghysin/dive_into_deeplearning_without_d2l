@@ -19,6 +19,34 @@ plt.rcParams['axes.unicode_minus'] = False
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def preprocess_image(image):
+    """
+    预处理单张图像用于推理。
+    
+    Args:
+        image: PIL 图像
+        
+    Returns:
+        preprocessed_image: 预处理后的张量 (3, 224, 224)
+    """
+    import torchvision.transforms.functional as FT
+    
+    # ImageNet 的均值和标准差
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+    
+    # Resize 到 224×224
+    resized_image = FT.resize(image, (224, 224))
+    
+    # 转换为张量
+    tensor_image = FT.to_tensor(resized_image)
+    
+    # 归一化
+    normalized_image = FT.normalize(tensor_image, mean=mean, std=std)
+    
+    return normalized_image
+
+
 def detect(image_path, model, min_score=0.2, max_overlap=0.45, top_k=200):
     """
     对单张图像进行目标检测。
@@ -41,7 +69,7 @@ def detect(image_path, model, min_score=0.2, max_overlap=0.45, top_k=200):
     original_image = original_image.convert('RGB')
     
     # 预处理
-    image = normalize(resize(original_image))
+    image = preprocess_image(original_image)
     image = image.to(device)
     
     # 前向传播
