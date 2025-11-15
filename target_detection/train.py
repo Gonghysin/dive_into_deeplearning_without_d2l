@@ -16,8 +16,17 @@ from datasets import PascalVOCDataset
 from model import TinyDetector, MultiBoxLoss
 from utils import *
 
-# 设置中文字体
-plt.rcParams['font.sans-serif'] = ['Hiragino Sans GB']
+# 设置中文字体（兼容Linux和macOS）
+import platform
+if platform.system() == 'Linux':
+    # Linux系统使用DejaVu Sans或SimHei
+    try:
+        plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'SimHei', 'WenQuanYi Micro Hei']
+    except:
+        plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+else:
+    # macOS使用Hiragino Sans GB
+    plt.rcParams['font.sans-serif'] = ['Hiragino Sans GB']
 plt.rcParams['axes.unicode_minus'] = False
 
 # 设备配置
@@ -217,7 +226,8 @@ def plot_training_curves(train_losses, val_losses, learning_rates, save_path):
     print(f'Training curves saved to: {save_path}')
 
 
-def save_checkpoint(epoch, model, optimizer, train_loss, val_loss, save_dir):
+def save_checkpoint(epoch, model, optimizer, train_loss, val_loss, save_dir, 
+                    train_losses=None, val_losses=None, learning_rates=None):
     """
     保存模型检查点。
     
@@ -228,6 +238,9 @@ def save_checkpoint(epoch, model, optimizer, train_loss, val_loss, save_dir):
         train_loss: 训练损失
         val_loss: 验证损失
         save_dir: 保存目录
+        train_losses: 训练损失历史记录（可选）
+        val_losses: 验证损失历史记录（可选）
+        learning_rates: 学习率历史记录（可选）
     """
     state = {
         'epoch': epoch,
@@ -236,6 +249,14 @@ def save_checkpoint(epoch, model, optimizer, train_loss, val_loss, save_dir):
         'train_loss': train_loss,
         'val_loss': val_loss,
     }
+    
+    # 如果提供了历史记录，则保存
+    if train_losses is not None:
+        state['train_losses'] = train_losses
+    if val_losses is not None:
+        state['val_losses'] = val_losses
+    if learning_rates is not None:
+        state['learning_rates'] = learning_rates
     
     # 保存最新的检查点
     latest_path = os.path.join(save_dir, 'checkpoint_latest.pth')
@@ -250,9 +271,51 @@ def save_checkpoint(epoch, model, optimizer, train_loss, val_loss, save_dir):
     return latest_path
 
 
+def load_checkpoint(checkpoint_path, model, optimizer):
+    """
+    从检查点恢复训练状态。
+    
+    Args:
+        checkpoint_path: 检查点文件路径
+        model: 模型
+        optimizer: 优化器
+        
+    Returns:
+        start_epoch: 起始epoch（检查点的epoch + 1）
+        train_losses: 训练损失列表
+        val_losses: 验证损失列表
+        learning_rates: 学习率列表
+        best_val_loss: 最佳验证损失
+    """
+    print(f"\n正在从检查点加载: {checkpoint_path}")
+    
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    
+    # 加载模型和优化器状态
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    
+    start_epoch = checkpoint['epoch'] + 1
+    best_val_loss = checkpoint.get('val_loss', float('inf'))
+    
+    # 如果检查点中保存了历史记录，则加载它们
+    train_losses = checkpoint.get('train_losses', [])
+    val_losses = checkpoint.get('val_losses', [])
+    learning_rates = checkpoint.get('learning_rates', [])
+    
+    print(f"✓ 检查点加载成功!")
+    print(f"  - 起始 Epoch: {start_epoch}")
+    print(f"  - 当前学习率: {optimizer.param_groups[0]['lr']:.6f}")
+    print(f"  - 最佳验证损失: {best_val_loss:.4f}")
+    print(f"  - 已训练 {len(train_losses)} 个 epoch\n")
+    
+    return start_epoch, train_losses, val_losses, learning_rates, best_val_loss
+
+
 def main():
     """
     主训练函数。
+    支持从检查点恢复训练：设置 resume=True 并指定 checkpoint_path
     """
     print("=" * 60)
     print("TinyDetector 目标检测训练")
@@ -263,6 +326,21 @@ def main():
     print(f"总 Epoch 数: {total_epochs}")
     print(f"结果保存路径: {results_dir}")
     print("=" * 60)
+
+    # ==================== 恢复训练配置 ====================
+    # 如果需要从检查点恢复训练，设置以下参数：
+    resume = True  # 是否从检查点恢复
+    checkpoint_path = '/root/autodl-tmp/dive_into_deeplearning_without_d2l/results/checkpoints/checkpoint_latest.pth'  # 检查点路径
+    
+    # 如果checkpoint_path不存在，自动查找最新的检查点
+    if resume and not os.path.exists(checkpoint_path):
+        latest_checkpoint = os.path.join(checkpoint_dir, 'checkpoint_latest.pth')
+        if os.path.exists(latest_checkpoint):
+            checkpoint_path = latest_checkpoint
+            print(f"\n自动使用最新检查点: {checkpoint_path}")
+        else:
+            print(f"\n警告: 未找到检查点文件，将从头开始训练")
+            resume = False
 
     # 初始化模型和优化器
     print("\n初始化模型...")
@@ -319,15 +397,24 @@ def main():
     print(f"验证集大小: {len(val_dataset)}")
 
     # 用于记录训练过程
+    start_epoch = 0
     train_losses = []
     val_losses = []
     learning_rates = []
     best_val_loss = float('inf')
+    
+    # 从检查点恢复训练
+    if resume and os.path.exists(checkpoint_path):
+        start_epoch, train_losses, val_losses, learning_rates, best_val_loss = load_checkpoint(
+            checkpoint_path, model, optimizer
+        )
+    else:
+        print("\n从头开始训练...\n")
 
     print("\n开始训练...\n")
     
     # 训练循环
-    for epoch in range(total_epochs):
+    for epoch in range(start_epoch, total_epochs):
         # 学习率衰减
         if epoch in decay_lr_at:
             adjust_learning_rate(optimizer, decay_lr_to)
@@ -367,7 +454,10 @@ def main():
             optimizer=optimizer,
             train_loss=train_loss,
             val_loss=val_loss,
-            save_dir=checkpoint_dir
+            save_dir=checkpoint_dir,
+            train_losses=train_losses,
+            val_losses=val_losses,
+            learning_rates=learning_rates
         )
 
         # 保存最佳模型

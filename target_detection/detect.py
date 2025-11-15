@@ -12,8 +12,17 @@ from utils import *
 import os
 import argparse
 
-# 设置中文字体
-plt.rcParams['font.sans-serif'] = ['Hiragino Sans GB']
+# 设置中文字体（兼容Linux和macOS）
+import platform
+if platform.system() == 'Linux':
+    # Linux系统使用DejaVu Sans或SimHei
+    try:
+        plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'SimHei', 'WenQuanYi Micro Hei']
+    except:
+        plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+else:
+    # macOS使用Hiragino Sans GB
+    plt.rcParams['font.sans-serif'] = ['Hiragino Sans GB']
 plt.rcParams['axes.unicode_minus'] = False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
