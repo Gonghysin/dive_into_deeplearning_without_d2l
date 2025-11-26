@@ -3,7 +3,7 @@ d2l 风格的绘图工具
 """
 
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('Agg')  # 使用非交互式后端，适合服务器/WSL环境
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -161,10 +161,18 @@ class Animator:
         plt.show()
 
 
-# 配置中文字体
+# 配置中文字体（支持Linux/Mac/Windows跨平台）
 try:
-    plt.rcParams['font.sans-serif'] = ['Hiragino Sans GB', 'Arial Unicode MS', 'SimHei']
-    plt.rcParams['axes.unicode_minus'] = False
+    plt.rcParams['font.sans-serif'] = [
+        'Noto Sans CJK SC',        # Linux: 思源黑体-简体
+        'WenQuanYi Micro Hei',     # Linux: 文泉驿微米黑
+        'WenQuanYi Zen Hei',       # Linux: 文泉驿正黑
+        'Hiragino Sans GB',        # macOS: 冬青黑体
+        'Microsoft YaHei',         # Windows: 微软雅黑
+        'SimHei',                  # Windows: 黑体
+        'DejaVu Sans'              # 通用备用字体
+    ]
+    plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 except:
     pass
 

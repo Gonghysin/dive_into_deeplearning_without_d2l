@@ -75,10 +75,10 @@ if __name__ == '__main__':
     Y, new_state = net(X.to(d2l.try_gpu()), state)
     print(Y.shape, len(new_state), new_state[0].shape)
 
-    # print(predict_ch8('time traveller', 10, net, vocab, d2l.try_gpu()))
+    print(predict_ch8('time traveller', 10, net, vocab, d2l.try_gpu()))
 
     num_epochs, lr = 500,1
-    # train_ch8(net, train_iter, vocab, lr, num_epochs, d2l.try_gpu())
+    train_ch8(net, train_iter, vocab, lr, num_epochs, d2l.try_gpu())
     # 困惑度 1.0, 123508.2 词元/秒 cpu
 
     net = RNNModelScratch(len(vocab), num_hiddens, d2l.try_gpu(), get_params, init_rnn_state, rnn)
