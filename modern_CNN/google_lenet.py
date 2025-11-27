@@ -76,6 +76,18 @@ if __name__ == '__main__':
         X = layer(X)
         print(layer.__class__.__name__,'output shape:\t',X.shape)
 
-    lr, num_epochs, batch_size = 0.1, 10, 128
-    train_iter, test_iter = load_data_fashion_mnist(batch_size, resize=224, auto_config=True)
+    # 优化训练速度:增大batch_size,减小图像尺寸
+    lr, num_epochs, batch_size = 0.1, 10, 256
+    train_iter, test_iter = load_data_fashion_mnist(batch_size, resize=96, auto_config=True)
+    
+    # 验证GPU使用情况
+    print("\n" + "="*60)
+    print("GPU状态验证:")
+    print(f"CUDA是否可用: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"当前CUDA设备: {torch.cuda.current_device()}")
+        print(f"设备名称: {torch.cuda.get_device_name(0)}")
+        print(f"初始GPU内存使用: {torch.cuda.memory_allocated(0)/1024**2:.2f} MB")
+    print("="*60 + "\n")
+    
     train_ch6(net, train_iter, test_iter, num_epochs, lr, device=None)
